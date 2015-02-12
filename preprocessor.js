@@ -6,7 +6,9 @@ module.exports = {
 
     process: function(src, path) {
         if (path.indexOf('node_modules') === -1) {
-            src = traceur.compile(src);
+            src = traceur.compile(src, {
+                sourceMap: true
+            });
         }
         return src;
     }

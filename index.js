@@ -1,4 +1,3 @@
-/* @flow */
 'use strict';
 
 let whiteList = ['filter', 'style', 'geometry'];
@@ -142,12 +141,12 @@ export function parseRuleTree(name, rule, parent) {
 
 
 export function parseRules(rules) {
-    let ruleTree = {};
+    let ruleTree = new RuleGroup({name: '_'});
 
     for (let name in rules) {
         let rule = rules[name];
         let root = new RuleGroup({name});
-        ruleTree[name] = parseRuleTree(name, rule, root);
+        ruleTree.addRule(parseRuleTree(name, rule, root));
     }
 
     return ruleTree;

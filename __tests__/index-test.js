@@ -52,7 +52,7 @@ describe('.parseRules(rules)', () => {
 
         it('returns a RuleGroup', () => {
 
-            expect(subject(ruleTree).roads instanceof RuleGroup)
+            expect(subject(ruleTree) instanceof RuleGroup)
                 .toBe(true);
         });
 
@@ -60,11 +60,11 @@ describe('.parseRules(rules)', () => {
             let tree = subject(ruleTree);
             let number = 0;
 
-            walkDown(tree.roads, (rule) => {
+            walkDown(tree, (rule) => {
                 number += 1;
             });
 
-            expect(number).toEqual(9);
+            expect(number).toEqual(16);
         });
     });
 });
