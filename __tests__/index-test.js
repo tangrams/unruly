@@ -8,7 +8,7 @@ describe('Rule', () => {
         let subject = new Rule({name: 'name'});
         expect(subject instanceof Rule).toBe(true);
         expect(subject.name).toEqual('name');
-
+        expect(typeof subject.buildStyle).toEqual('function');
     });
 
 });

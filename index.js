@@ -1,6 +1,21 @@
 'use strict';
 
-let whiteList = ['filter', 'style', 'geometry'];
+export let whiteList = ['filter', 'style', 'geometry'];
+
+let RuleMixin = {
+
+    buildStyle() {
+        return calculateStyle(this);
+    },
+
+    toJSON() {
+        return {
+            name: this.name,
+            sytle: this.style
+        };
+    }
+
+}
 
 export class Rule {
 
@@ -8,12 +23,7 @@ export class Rule {
         this.name = name;
         this.parent = parent;
         this.style = style;
-    }
-    toJSON() {
-        return {
-            name: this.name,
-            style: this.style,
-        }
+        Object.assign(this, RuleMixin);
     }
 }
 
@@ -25,19 +35,18 @@ export class RuleGroup {
         this.parent = parent;
         this.style = style;
         this.rules = rules || [];
+        Object.assign(this, RuleMixin);
     }
 
     addRule(rule) {
         this.rules.push(rule);        
     }
 
-    toJSON() {
-        return {
-            name: this.name,
-            style: this.style,
-        }
+    findMatchingRules(context) {
+        let rules = [];
+        matchFeature(context, this.rules, rules);
+        return rules;
     }
-
 
 }
 
@@ -92,7 +101,7 @@ function buildFilter(rule) {
     }
 }
 
-export function calculateStyle(rule, styles) {
+export function calculateStyle(rule, styles = []) {
 
     walkUp(rule, (r) =>{
         if (r.style) {
@@ -133,9 +142,8 @@ export function parseRuleTree(name, rule, parent) {
         if (typeof property === 'object') {
             parseRuleTree(name, property, r);
         }
-
     }
-    
+
     return parent;
 }
 
@@ -184,6 +192,5 @@ export function matchFeature(context, rules, collectedRules) {
             }
         }
     }
-
     return matched;
 }
