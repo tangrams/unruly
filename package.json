@@ -1,0 +1,25 @@
+{
+  "name": "unruly",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Ivan Willig",
+  "license": "MIT",
+  "dependencies": {
+    "match-feature": "tangrams/match-feature"
+  },
+  "devDependencies": {
+    "jest": "~0.1.37",
+    "benchmark": "~1.0.0",
+    "jest-cli": "~0.2.2",
+    "react-tools": "~0.12.2",
+    "traceur": "0.0.84"
+  },
+  "jest": {
+    "setupEnvScriptFile": "./node_modules/traceur/bin/traceur-runtime.js",
+    "scriptPreprocessor": "<rootDir>/preprocessor.js"
+  }
+}
