@@ -65,21 +65,25 @@ export class RuleTree {
         this.rules = [];
     }
 
+    addRule(rule) {
+        this.rules.push(rule);        
+    }
+    
     findMatchingRules(context, flatten = false) {
         let rules = [];
         matchFeature(context, this.rules, rules);
-        let builtStyles = rules.map(buildStyle);
+        let builtStyles = rules.map(x => buildStyle(x, context));
 
         if (flatten) {
-            return mergeStyles(builtStyles);
+            return [mergeStyles(builtStyles, context)];
         }
         return builtStyles;
     }
 
 }
 
-function buildStyle(rule) {
-    return mergeStyles(calculateStyle(rule));
+function buildStyle(rule, context) {
+    return mergeStyles(calculateStyle(rule), context);
 }
 
 
@@ -175,7 +179,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 }
 
 
-export function mergeStyles(styles) {
+export function mergeStyles(styles, context) {
 
     styles = styles.filter(x => x);
     let style = cloneStyle({}, ...styles);
@@ -194,7 +198,7 @@ export function mergeStyles(styles) {
     if (style.order.length === 1 && typeof style.order[0] === 'number') {
         style.order = style.order[0];
     } else {
-        style.order = calculateOrder(style.order);
+        style.order = calculateOrder(style.order, context);
     }
     return style;
 }

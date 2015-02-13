@@ -2,7 +2,7 @@
   "name": "unruly",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "lib/unruly.js",
   "scripts": {
     "test": "jest"
   },
