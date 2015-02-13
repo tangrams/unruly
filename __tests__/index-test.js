@@ -4,7 +4,7 @@ jest.dontMock('./style');
 jest.dontMock('match-feature');
 
 describe('Rule', () => {
-    let Rule = require('../index').Rule;
+    let {Rule} = require('../index');
 
     it('returns an new instanceof', () => {
         let subject = new Rule({name: 'name'});
@@ -16,7 +16,7 @@ describe('Rule', () => {
 });
 
 describe('RuleGroup', () => {
-    let RuleGroup = require('../index').RuleGroup;
+    let {RuleGroup} = require('../index');
 
     it('returns an new instanceof', () => {
         let subject = new RuleGroup({name: 'test'});
@@ -26,7 +26,7 @@ describe('RuleGroup', () => {
 });
 
 describe('.cloneStyle()', () => {
-    let cloneStyle = require('../index').cloneStyle;
+    let {cloneStyle} = require('../index');
 
     describe('when given a deeply nested object',  () => {
         it('merged the properies at any depth',  () => {
@@ -46,28 +46,26 @@ describe('.cloneStyle()', () => {
 
 describe('.parseRules(rules)', () => {
 
-    let subject    = require('../index').parseRules,
-        walkDown   = require('../index').walkDown,
-        RuleGroup  = require('../index').RuleGroup,
+    let {parseRules, walkDown, RuleTree} = require('../index'),
         ruleTree   = require('./style');
 
     describe('when given a raw ruleTree', () => {
 
         it('returns a RuleGroup', () => {
 
-            expect(subject(ruleTree) instanceof RuleGroup)
+            expect(parseRules(ruleTree) instanceof RuleTree)
                 .toBe(true);
         });
 
         it('returns the correct number of children rules', () => {
-            let tree = subject(ruleTree);
+            let tree = parseRules(ruleTree);
             let number = 0;
 
             walkDown(tree, (rule) => {
                 number += 1;
             });
 
-            expect(number).toEqual(16);
+            expect(number).toEqual(3);
         });
     });
 });
@@ -79,7 +77,7 @@ describe('.parseRuleTree()', () => {});
 describe('.buildFilter()', () => {});
 
 describe('.groupProps()', () => {
-    let groupProps = require('../index').groupProps;
+    let {groupProps} = require('../index');
 
     describe('given an object ', () => {
         let subject = {
@@ -106,7 +104,8 @@ describe('.groupProps()', () => {
 });
 
 describe('.calculateStyle()', () => {
-    let calculateStyle = require('../index').calculateStyle;
+    let {calculateStyle} = require('../index');
+
     let a = {
         parent: null,
         style: {
@@ -135,40 +134,78 @@ describe('.calculateStyle()', () => {
 
 });
 
-describe.only('RuleGroup.findMatchingRules(context)', () => {
-    let subject,
-        walkDown   = require('../index').walkDown,
-        parseRules = require('../index').parseRules,
-        ruleTree   = JSON.stringify(require('./style'));
+describe('RuleGroup.findMatchingRules(context)', () => {
+    let subject;
+    let {parseRules} = require('../index');
 
     beforeEach(() => {
-        subject = parseRules(JSON.parse(ruleTree));
+        subject = parseRules(
+            {
+                earth: {
+                    filter: {
+                        kind: 'highway'
+                    },
+                    style: {
+                        color: [1, 2, 3]
+                    },
+                    fillA: {
+                        filter: {
+                            name: 'FDR'
+                        },
+                        style: {}
+                    }
+                },
+                roads: {
+                    filter: {
+                        '@zoom': { min: 3}
+                    },
+                    style: {
+                        color: [7, 8, 9]
+                    },
+                    fillB: {
+                        filter: {
+                            id: 10
+                        },
+                        style: {
+                            color: [10, 11, 12]                            
+                        }
+                    }
+                }
+            }
+        );
     });
 
     afterEach(() => {
         subject = null;
     });
     
-    describe('when the feature is a road and a highway', () => {
+    describe('when the feature is a highway and is named FDR', () => {
         let context = {
             feature: {
                 properties: {
                     kind: 'highway',
-                    name: 'FDR'
+                    name: 'FDR',
+                    id: 10
                 }
-            }
+            },
+            zoom: 3
         };
 
-        it('returns the correct number', () => {
-
-            walkDown(subject, (r) => {
-                console.log(r.name);
-            });
-
+        it('returns the correct number of matching rules', () => {
             let rules = subject.findMatchingRules(context);
-            console.log(rules);
+            expect(rules.length).toEqual(2);
         });
 
+        describe('when we ask to flatten the rule tree', () => {
+            it('returns a single object', () => {
+                let rule = subject.findMatchingRules(context, true);
+                expect(rule).toEqual({
+                    color: [10, 11, 12],
+                    order: 0,
+                    visible: true
+                });
+            });
+        });
     });
 
     describe('when the feature is not a road', () => {});

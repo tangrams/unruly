@@ -16,7 +16,8 @@
     "benchmark": "~1.0.0",
     "jest-cli": "~0.2.2",
     "react-tools": "~0.12.2",
-    "traceur": "0.0.84"
+    "traceur": "0.0.84",
+    "js-yaml": "~3.2.6"
   },
   "jest": {
     "setupEnvScriptFile": "./node_modules/traceur/bin/traceur-runtime.js",

@@ -1,5 +1,5 @@
 'use strict';
-var mf = require('match-feature');
+let {match} = require('match-feature');
 
 export let whiteList = ['filter', 'style', 'geometry'];
 
@@ -12,7 +12,7 @@ let RuleMixin = {
     buildFilter() {
         var type = typeof this.filter;
         if (type === 'object') {
-            this.filter = mf.match(this.filter);
+            this.filter = match(this.filter);
         }
     },
 
@@ -25,9 +25,6 @@ let RuleMixin = {
 
 };
 
-/**
- *
- */
 export class Rule {
 
     constructor({name, parent, style, filter}) {
@@ -41,7 +38,6 @@ export class Rule {
         this.buildFilter();
     }
 }
-
 
 export class RuleGroup {
 
@@ -69,17 +65,21 @@ export class RuleTree {
         this.rules = [];
     }
 
-    addRule(rule) {
-        this.rules.push(rule);
-    }
-
-
-    findMatchingRules(context) {
+    findMatchingRules(context, flatten = false) {
         let rules = [];
         matchFeature(context, this.rules, rules);
-        return rules;
+        let builtStyles = rules.map(buildStyle);
+
+        if (flatten) {
+            return mergeStyles(builtStyles);
+        }
+        return builtStyles;
     }
 
+}
+
+function buildStyle(rule) {
+    return mergeStyles(calculateStyle(rule));
 }
 
 
@@ -97,10 +97,10 @@ export function walkUp(rule, cb) {
         walkUp(rule.parent, cb);
     }
 
-    if ((!rule instanceof RuleTree)) {
+
+    if (!(rule instanceof RuleTree)) {
         cb(rule);
     }
-
 }
 
 export function walkDown(rule, cb) {
@@ -156,20 +156,61 @@ export function cloneStyle(newObj, ...sources) {
     return newObj;
 }
 
+export function calculateOrder(orders, context = null, defaultOrder = 0) {
+    let sum = defaultOrder;
+
+    for (let order of orders) {
+        if (typeof order === 'function') {
+            order = order(context);
+        } else {
+            order = parseFloat(order);
+        }
+
+        if (!order || isNaN(order)) {
+            continue;
+        }
+        sum += order;
+    }
+    return sum;
+}
+
+
+export function mergeStyles(styles) {
+
+    styles = styles.filter(x => x);
+    let style = cloneStyle({}, ...styles);
+    style.visible = !styles.some(x => x.visible === false);
+
+    let orderStart = 0;
+    for (let i = styles.length - 1; i >= 0; i -= 1) {
+        if (styles[i].orderReset) {
+            orderStart = i;
+            break;
+        }
+    }
+    style.order = styles.slice(orderStart).
+        filter(style => style.order).map(style => style.order);
+
+    if (style.order.length === 1 && typeof style.order[0] === 'number') {
+        style.order = style.order[0];
+    } else {
+        style.order = calculateOrder(style.order);
+    }
+    return style;
+}
+
+
 export function parseRuleTree(name, rule, parent) {
 
     let properties = {name, parent};
     let [whiteListed, nonWhiteListed] = groupProps(rule);
-
     let empty = isEmpty(nonWhiteListed);
-
     let Create = empty ? Rule : RuleGroup;
     let r = new Create(Object.assign(properties, whiteListed));
 
     if (parent) {
         parent.addRule(r);
     }
-
 
     if (!empty) {
         for (let key in nonWhiteListed) {
@@ -190,7 +231,7 @@ export function parseRules(rules) {
 
     for (let key in rules) {
         let rule = rules[key];
-        ruleTree.addRule(parseRuleTree(key, rule));
+        parseRuleTree(key, rule, ruleTree);
     }
 
     return ruleTree;
