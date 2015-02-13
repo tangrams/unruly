@@ -8,10 +8,16 @@
         },
         "fill": {
             "filter": {
-                "kind": "motorway"
+                "name": "FDR"
             },
             "style": {
                 "color": [1, 1, 0]
+            }
+        },
+
+        "rule1": {
+            "filter": {
+                "a": 1
             }
         }
     }

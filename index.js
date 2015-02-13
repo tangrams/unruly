@@ -61,6 +61,19 @@ export class RuleGroup {
         this.rules.push(rule);        
     }
 
+}
+
+export class RuleTree {
+
+    constructor() {
+        this.rules = [];
+    }
+
+    addRule(rule) {
+        this.rules.push(rule);
+    }
+
+
     findMatchingRules(context) {
         let rules = [];
         matchFeature(context, this.rules, rules);
@@ -68,6 +81,7 @@ export class RuleGroup {
     }
 
 }
+
 
 function isWhiteListed(key) {
     return whiteList.indexOf(key) > -1;
@@ -82,7 +96,11 @@ export function walkUp(rule, cb) {
     if (rule.parent) {
         walkUp(rule.parent, cb);
     }
-    cb(rule);
+
+    if ((!rule instanceof RuleTree)) {
+        cb(rule);
+    }
+
 }
 
 export function walkDown(rule, cb) {
@@ -92,7 +110,10 @@ export function walkDown(rule, cb) {
             walkDown(r, cb);
         });
     }
-    cb(rule);
+
+    if (!(rule instanceof RuleTree)) {
+        cb(rule);
+    }
 }
 
 export function groupProps(obj) {
@@ -165,11 +186,11 @@ export function parseRuleTree(name, rule, parent) {
 
 
 export function parseRules(rules) {
-    let ruleTree = {};
+    let ruleTree = new RuleTree();
 
     for (let key in rules) {
         let rule = rules[key];
-        ruleTree[key] = parseRuleTree(key, rule);
+        ruleTree.addRule(parseRuleTree(key, rule));
     }
 
     return ruleTree;
@@ -198,6 +219,7 @@ export function matchFeature(context, rules, collectedRules) {
 
         } else if (current instanceof RuleGroup) {
             if (doesMatch(current.filter, context)) {
+
                 matched = true;
                 childMatched = matchFeature(
                     context,

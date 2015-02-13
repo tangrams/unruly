@@ -153,19 +153,20 @@ describe.only('RuleGroup.findMatchingRules(context)', () => {
         let context = {
             feature: {
                 properties: {
-                    kind: 'bob'
+                    kind: 'highway',
+                    name: 'FDR'
                 }
             }
         };
 
         it('returns the correct number', () => {
-            //let result = subject.findMatchingRules(context);
-            console.log(subject.earth);
 
-            walkDown(subject.earth, (r) => {
-                //console.log(r);
+            walkDown(subject, (r) => {
+                console.log(r.name);
             });
 
+            let rules = subject.findMatchingRules(context);
+            console.log(rules);
         });
 
     });
