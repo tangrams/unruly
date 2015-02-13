@@ -1,5 +1,7 @@
 'use strict';
 jest.dontMock('../index');
+jest.dontMock('./style');
+jest.dontMock('match-feature');
 
 describe('Rule', () => {
     let Rule = require('../index').Rule;
@@ -43,10 +45,11 @@ describe('.cloneStyle()', () => {
 });
 
 describe('.parseRules(rules)', () => {
-    let subject    = require('../index').parseRules;
-    let walkDown     = require('../index').walkDown;
-    let RuleGroup  = require('../index').RuleGroup;
-    let ruleTree   = require('./style');
+
+    let subject    = require('../index').parseRules,
+        walkDown   = require('../index').walkDown,
+        RuleGroup  = require('../index').RuleGroup,
+        ruleTree   = require('./style');
 
     describe('when given a raw ruleTree', () => {
 
@@ -132,8 +135,41 @@ describe('.calculateStyle()', () => {
 
 });
 
-describe('.matchFeatures(feature)', () => {
-    describe('when the feature is a road and a highway', () => {});
+describe.only('RuleGroup.findMatchingRules(context)', () => {
+    let subject,
+        walkDown   = require('../index').walkDown,
+        parseRules = require('../index').parseRules,
+        ruleTree   = JSON.stringify(require('./style'));
+
+    beforeEach(() => {
+        subject = parseRules(JSON.parse(ruleTree));
+    });
+
+    afterEach(() => {
+        subject = null;
+    });
+    
+    describe('when the feature is a road and a highway', () => {
+        let context = {
+            feature: {
+                properties: {
+                    kind: 'bob'
+                }
+            }
+        };
+
+        it('returns the correct number', () => {
+            //let result = subject.findMatchingRules(context);
+            console.log(subject.earth);
+
+            walkDown(subject.earth, (r) => {
+                //console.log(r);
+            });
+
+        });
+
+    });
+
     describe('when the feature is not a road', () => {});
     describe('when the feature matches only one feature', () => {});
     describe('when the feature does not match any filters', () => {});

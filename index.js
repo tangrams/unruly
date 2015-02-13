@@ -1,4 +1,5 @@
 'use strict';
+var mf = require('match-feature');
 
 export let whiteList = ['filter', 'style', 'geometry'];
 
@@ -8,6 +9,13 @@ let RuleMixin = {
         return calculateStyle(this);
     },
 
+    buildFilter() {
+        var type = typeof this.filter;
+        if (type === 'object') {
+            this.filter = mf.match(this.filter);
+        }
+    },
+
     toJSON() {
         return {
             name: this.name,
@@ -15,27 +23,38 @@ let RuleMixin = {
         };
     }
 
-}
+};
 
+/**
+ *
+ */
 export class Rule {
 
-    constructor({name, parent, style}) {
-        this.name = name;
-        this.parent = parent;
-        this.style = style;
+    constructor({name, parent, style, filter}) {
+
+        this.name    = name;
+        this.parent  = parent;
+        this.style   = style;
+        this.filter  = filter;
+
         Object.assign(this, RuleMixin);
+        this.buildFilter();
     }
 }
 
 
 export class RuleGroup {
 
-    constructor({name, parent, style, rules}) {
-        this.name = name;
+    constructor({name, parent, style, rules, filter}) {
+
+        this.name   = name;
         this.parent = parent;
-        this.style = style;
-        this.rules = rules || [];
+        this.style  = style;
+        this.filter = filter;
+        this.rules  = rules || [];
+
         Object.assign(this, RuleMixin);
+        this.buildFilter();
     }
 
     addRule(rule) {
@@ -55,26 +74,24 @@ function isWhiteListed(key) {
 }
 
 function isEmpty(obj) {
-    return Object.getOwnPropertyNames(obj) === 0;
+    return Object.getOwnPropertyNames(obj).length === 0;
 }
 
 export function walkUp(rule, cb) {
 
     if (rule.parent) {
-        walkUp(rule.parent, cb)
+        walkUp(rule.parent, cb);
     }
-
     cb(rule);
 }
 
 export function walkDown(rule, cb) {
-    if (rule.rules) {
 
+    if (rule.rules) {
         rule.rules.forEach((r) => {
             walkDown(r, cb);
         });
     }
-
     cb(rule);
 }
 
@@ -89,16 +106,6 @@ export function groupProps(obj) {
         }
     }
     return [whiteListed, nonWhiteListed];
-}
-
-function buildFilter(rule) {
-    var type = typeof rule.filter;
-    switch (type) {
-    case 'object':
-        return mf.match(rule.filter);
-    case 'function':
-        return rule.filter;
-    }
 }
 
 export function calculateStyle(rule, styles = []) {
@@ -129,32 +136,40 @@ export function cloneStyle(newObj, ...sources) {
 }
 
 export function parseRuleTree(name, rule, parent) {
+
     let properties = {name, parent};
     let [whiteListed, nonWhiteListed] = groupProps(rule);
-    let create = isEmpty(nonWhiteListed) ? Rule : RuleGroup;
-    let r = new create(properties);
 
-    parent.addRule(r);
+    let empty = isEmpty(nonWhiteListed);
 
-    for (let name in nonWhiteListed) {
-        let property = nonWhiteListed[name];
+    let Create = empty ? Rule : RuleGroup;
+    let r = new Create(Object.assign(properties, whiteListed));
 
-        if (typeof property === 'object') {
-            parseRuleTree(name, property, r);
-        }
+    if (parent) {
+        parent.addRule(r);
     }
 
-    return parent;
+
+    if (!empty) {
+        for (let key in nonWhiteListed) {
+            let property = nonWhiteListed[key];
+            if (typeof property === 'object') {
+                parseRuleTree(key, property, r);
+            }
+        }
+
+    }
+
+    return r;
 }
 
 
 export function parseRules(rules) {
-    let ruleTree = new RuleGroup({name: '_'});
+    let ruleTree = {};
 
-    for (let name in rules) {
-        let rule = rules[name];
-        let root = new RuleGroup({name});
-        ruleTree.addRule(parseRuleTree(name, rule, root));
+    for (let key in rules) {
+        let rule = rules[key];
+        ruleTree[key] = parseRuleTree(key, rule);
     }
 
     return ruleTree;
@@ -162,11 +177,11 @@ export function parseRules(rules) {
 
 
 function doesMatch(filter, context) {
-    return ((typeof filter === 'function' && filter(context)) || (filter == null));
+    return ((typeof filter === 'function' && filter(context)) ||
+            (filter == null));
 }
 
 export function matchFeature(context, rules, collectedRules) {
-    let current;
     let matched = false;
     let childMatched = false;
 
@@ -175,22 +190,27 @@ export function matchFeature(context, rules, collectedRules) {
     for (let current of rules) {
 
         if (current instanceof Rule) {
-            if (current.calculateStyle) {
 
-                if (doesMatch(current.filter, context)) {
-                    matched = true;
+            if (doesMatch(current.filter, context)) {
+                matched = true;
+                collectedRules.push(current);
+            }
+
+        } else if (current instanceof RuleGroup) {
+            if (doesMatch(current.filter, context)) {
+                matched = true;
+                childMatched = matchFeature(
+                    context,
+                    current.rules,
+                    collectedRules
+                );
+
+                if (!childMatched) {
                     collectedRules.push(current);
-                }
-            } else if (current instanceof RuleGroup) {
-                if (doesMatch(current.filter, context)) {
-                    matched = true;
-                    childMatched = matchFeature(context, current.rules, collectedRules);
-                    if (!childMatched && current.calculatedStyle) {
-                        collectedRules.push(current);
-                    }
                 }
             }
         }
     }
+
     return matched;
 }
