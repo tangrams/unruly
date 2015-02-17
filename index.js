@@ -1,20 +1,37 @@
 'use strict';
-let {match} = require('match-feature');
 
-export let whiteList = ['filter', 'style', 'geometry'];
+const {match} = require('match-feature');
 
-let RuleMixin = {
+export const whiteList = ['filter', 'style', 'geometry'];
+
+class Rule {
+
+    constructor(name, parent, style, filter) {
+        this.name = name;
+        this.style = style;
+        this.filter = filter;
+        this.parent = parent;
+        this.buildFilter();
+        this.buildStyle();
+        this.gatherParentStyles();
+    }
 
     buildStyle() {
-        return calculateStyle(this);
-    },
+        this.calculateStyled = calculateStyle(this);
+    }
 
     buildFilter() {
         var type = typeof this.filter;
         if (type === 'object') {
             this.filter = match(this.filter);
         }
-    },
+    }
+
+    gatherParentStyles() {
+        this.parentStyles = this.calculateStyled.slice(
+            0, this.calculateStyled.length - 1
+        );
+    }
 
     toJSON() {
         return {
@@ -23,69 +40,46 @@ let RuleMixin = {
         };
     }
 
-};
+}
 
-export class Rule {
 
+export class RuleLeaf extends Rule {
     constructor({name, parent, style, filter}) {
-
-        this.name    = name;
-        this.parent  = parent;
-        this.style   = style;
-        this.filter  = filter;
-
-        Object.assign(this, RuleMixin);
-        this.buildFilter();
+        super(name, parent, style, filter);
     }
+
 }
 
-export class RuleGroup {
-
+export class RuleTree extends Rule {
     constructor({name, parent, style, rules, filter}) {
-
-        this.name   = name;
-        this.parent = parent;
-        this.style  = style;
-        this.filter = filter;
-        this.rules  = rules || [];
-
-        Object.assign(this, RuleMixin);
-        this.buildFilter();
+        super(name, parent, style, filter);
+        this.rules = rules || [];
     }
 
     addRule(rule) {
-        this.rules.push(rule);        
+        this.rules.push(rule);
     }
 
-}
-
-export class RuleTree {
-
-    constructor() {
-        this.rules = [];
-    }
-
-    addRule(rule) {
-        this.rules.push(rule);        
-    }
-    
     findMatchingRules(context, flatten = false) {
-        let rules = [];
-        matchFeature(context, this.rules, rules);
-        let builtStyles = rules.map(x => buildStyle(x, context));
+        let rules = [], builtStyles = [];
 
-        if (flatten) {
-            return [mergeStyles(builtStyles, context)];
+        matchFeature(context, this.rules, rules);
+
+        if (rules.length > 1) {
+            if (flatten === true) {
+                let parents = mergeStyles(rules.map( x =>  mergeStyles(x.parentStyles) ));
+                return parents;
+            } else {
+                builtStyles = rules.map( x => mergeStyles(x.calculateStyled));
+            }
+        } else if (rules.length === 1) {
+            builtStyles = mergeStyles(rules[0].calculatedStyled);
         }
+
         return builtStyles;
     }
 
 }
-
-function buildStyle(rule, context) {
-    return mergeStyles(calculateStyle(rule), context);
-}
-
 
 function isWhiteListed(key) {
     return whiteList.indexOf(key) > -1;
@@ -101,10 +95,7 @@ export function walkUp(rule, cb) {
         walkUp(rule.parent, cb);
     }
 
-
-    if (!(rule instanceof RuleTree)) {
-        cb(rule);
-    }
+    cb(rule);
 }
 
 export function walkDown(rule, cb) {
@@ -115,9 +106,7 @@ export function walkDown(rule, cb) {
         });
     }
 
-    if (!(rule instanceof RuleTree)) {
-        cb(rule);
-    }
+    cb(rule);
 }
 
 export function groupProps(obj) {
@@ -165,7 +154,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 
     for (let order of orders) {
         if (typeof order === 'function') {
-            order = order(context);
+            order = order();
         } else {
             order = parseFloat(order);
         }
@@ -179,7 +168,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 }
 
 
-export function mergeStyles(styles, context) {
+export function mergeStyles(styles) {
 
     styles = styles.filter(x => x);
     let style = cloneStyle({}, ...styles);
@@ -198,7 +187,7 @@ export function mergeStyles(styles, context) {
     if (style.order.length === 1 && typeof style.order[0] === 'number') {
         style.order = style.order[0];
     } else {
-        style.order = calculateOrder(style.order, context);
+        style.order = calculateOrder(style.order);
     }
     return style;
 }
@@ -209,7 +198,7 @@ export function parseRuleTree(name, rule, parent) {
     let properties = {name, parent};
     let [whiteListed, nonWhiteListed] = groupProps(rule);
     let empty = isEmpty(nonWhiteListed);
-    let Create = empty ? Rule : RuleGroup;
+    let Create = empty ? RuleLeaf : RuleTree;
     let r = new Create(Object.assign(properties, whiteListed));
 
     if (parent) {
@@ -231,14 +220,14 @@ export function parseRuleTree(name, rule, parent) {
 
 
 export function parseRules(rules) {
-    let ruleTree = new RuleTree();
+    let ruleTrees = {};
 
     for (let key in rules) {
         let rule = rules[key];
-        parseRuleTree(key, rule, ruleTree);
+        ruleTrees[key] = parseRuleTree(key, rule);
     }
 
-    return ruleTree;
+    return ruleTrees;
 }
 
 
@@ -255,14 +244,14 @@ export function matchFeature(context, rules, collectedRules) {
 
     for (let current of rules) {
 
-        if (current instanceof Rule) {
+        if (current instanceof RuleLeaf) {
 
             if (doesMatch(current.filter, context)) {
                 matched = true;
                 collectedRules.push(current);
             }
 
-        } else if (current instanceof RuleGroup) {
+        } else if (current instanceof RuleTree) {
             if (doesMatch(current.filter, context)) {
 
                 matched = true;

@@ -4,11 +4,11 @@ jest.dontMock('./style');
 jest.dontMock('match-feature');
 
 describe('Rule', () => {
-    let {Rule} = require('../index');
+    const {RuleLeaf} = require('../index');
 
     it('returns an new instanceof', () => {
-        let subject = new Rule({name: 'name'});
-        expect(subject instanceof Rule).toBe(true);
+        let subject = new RuleLeaf({name: 'name'});
+        expect(subject instanceof RuleLeaf).toBe(true);
         expect(subject.name).toEqual('name');
         expect(typeof subject.buildStyle).toEqual('function');
     });
@@ -16,17 +16,17 @@ describe('Rule', () => {
 });
 
 describe('RuleGroup', () => {
-    let {RuleGroup} = require('../index');
+    const {RuleTree} = require('../index');
 
     it('returns an new instanceof', () => {
-        let subject = new RuleGroup({name: 'test'});
-        expect(subject instanceof RuleGroup).toBe(true);
+        let subject = new RuleTree({name: 'test'});
+        expect(subject instanceof RuleTree).toBe(true);
         expect(subject.name).toEqual('test');
     });
 });
 
 describe('.cloneStyle()', () => {
-    let {cloneStyle} = require('../index');
+    const {cloneStyle} = require('../index');
 
     describe('when given a deeply nested object',  () => {
         it('merged the properies at any depth',  () => {
@@ -46,26 +46,25 @@ describe('.cloneStyle()', () => {
 
 describe('.parseRules(rules)', () => {
 
-    let {parseRules, walkDown, RuleTree} = require('../index'),
-        ruleTree   = require('./style');
+    const {parseRules, walkDown}= require('../index');
+    const ruleTree   = require('./style');
 
     describe('when given a raw ruleTree', () => {
 
         it('returns a RuleGroup', () => {
 
-            expect(parseRules(ruleTree) instanceof RuleTree)
-                .toBe(true);
+            expect(typeof parseRules(ruleTree) === 'object').toBe(true);
         });
 
         it('returns the correct number of children rules', () => {
-            let tree = parseRules(ruleTree);
+            let tree = parseRules(ruleTree).root;
             let number = 0;
 
             walkDown(tree, (rule) => {
                 number += 1;
             });
 
-            expect(number).toEqual(3);
+            expect(number).toEqual(4);
         });
     });
 });
@@ -136,40 +135,54 @@ describe('.calculateStyle()', () => {
 
 describe('RuleGroup.findMatchingRules(context)', () => {
     let subject;
-    let {parseRules} = require('../index');
+    const {parseRules} = require('../index');
 
     beforeEach(() => {
         subject = parseRules(
             {
-                earth: {
+                root: {
                     filter: {
                         kind: 'highway'
                     },
                     style: {
+                        width: 10,
                         color: [1, 2, 3]
                     },
                     fillA: {
                         filter: {
                             name: 'FDR'
                         },
-                        style: {}
-                    }
-                },
-                roads: {
-                    filter: {
-                        '@zoom': { min: 3}
+                        style: {
+                            order: 1,
+                            width: 20,
+                            color: [3.14, 3.14, 3.14]
+                        },
+                        a: {
+                            filter: {
+                                name: 'FDR'
+                            },
+                            style: {
+                                color: [2.71828, 2.71828, 2.71828]
+                            }
+                        }
                     },
-                    style: {
-                        color: [7, 8, 9]
-                    },
-                    fillB: {
+                    roads: {
                         filter: {
-                            id: 10
+                            '@zoom': { min: 3}
                         },
                         style: {
-                            color: [10, 11, 12]                            
+                            color: [7, 8, 9]
+                        },
+                        fillB: {
+                            filter: {
+                                id: 10
+                             },
+                            style: {
+                                color: [10, 11, 12]
+                            }
                         }
                     }
+
                 }
             }
         );
@@ -178,9 +191,32 @@ describe('RuleGroup.findMatchingRules(context)', () => {
     afterEach(() => {
         subject = null;
     });
-    
+
+    describe('when the context matches and we ask to merge the sibling rules', () => {
+        const context = {
+            feature: {
+                properties: {
+                    kind: 'highway',
+                    name: 'FDR',
+                    id: 10
+                }
+            },
+            zoom: 3
+        };
+
+        it('returns a single object', () => {
+            let rule = subject.root.findMatchingRules(context, true);
+            expect(typeof rule === 'object').toBe(true);
+            expect(rule).toEqual({
+                color: [10, 11, 12],
+                order: 2,
+                visible: true
+            });
+        });
+    });
+
     describe('when the feature is a highway and is named FDR', () => {
-        let context = {
+        const context = {
             feature: {
                 properties: {
                     kind: 'highway',
@@ -192,25 +228,26 @@ describe('RuleGroup.findMatchingRules(context)', () => {
         };
 
         it('returns the correct number of matching rules', () => {
-            let rules = subject.findMatchingRules(context);
+            let rules = subject.root.findMatchingRules(context);
             expect(rules.length).toEqual(2);
-        });
-
-        describe('when we ask to flatten the rule tree', () => {
-            it('returns a single object', () => {
-                let rule = subject.findMatchingRules(context, true);
-                expect(rule).toEqual({
-                    color: [10, 11, 12],
-                    order: 0,
-                    visible: true
-                });
-            });
         });
     });
 
-    describe('when the feature is not a road', () => {});
-    describe('when the feature matches only one feature', () => {});
-    describe('when the feature does not match any filters', () => {});
+    describe('when the feature is not a road', () => {
+        const context = {
+            feature: {
+                properties: {
+                    kind: 'aeroway'
+                }
+            }
+        };
+
+        it('returns an empty array of rules', () => {
+            const rule = subject.root.findMatchingRules(context);
+            expect(rule.length).toBe(0);
+        });
+    });
+
 });
 
 
