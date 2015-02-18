@@ -25,7 +25,7 @@ describe('RuleGroup', () => {
     });
 });
 
-describe('.mergeWithDepth()', () => {
+describe.only('.mergeWithDepth()', () => {
     let subject = [
         [ { a: 0.001 }, { b: 2 }, { c: 3 }, { d: 4 } ],
         [ { a: 3.14 }, { d: 3 }, { a: 1 }, { b: 2 }],
@@ -46,6 +46,48 @@ describe('.mergeWithDepth()', () => {
                 d: 'x'
             });
         });
+    });
+
+    describe('when given a array that is similar to real data', () => {
+        const subject = [
+            [
+                {
+                    "width": 10,
+                    "color": [1, 2, 3]
+                },
+                {
+                    "order": 1,
+                    "color": [3.14, 3.14, 3.14]
+                },
+                {
+                    "width": 20,
+                    "a": 'b',
+                    "color": [2.71828, 2.71828, 2.71828]
+                }
+            ],
+            [
+                {
+                    "width": 10,
+                    "color": [1, 2, 3]
+                },
+                {
+                    "width": 10,
+                    "order": -1,
+                    "a": "x",
+                    "color": [7, 8, 9]
+                }
+            ]
+        ];
+
+        it('returns the correct object', () => {
+            expect(mergeWithDepth(subject)).toEqual({
+                width: 20,
+                order: -1,
+                a: 'b',
+                color: [2.71828, 2.71828, 2.71828]
+            });
+        });
+
     });
 
 });
@@ -196,6 +238,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                             '@zoom': { min: 3}
                         },
                         style: {
+                            width: 10,
                             color: [7, 8, 9]
                         },
                         fillB: {
@@ -203,18 +246,18 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                                 id: 10
                              },
                             style: {
-                                width: 10,
                                 color: [10, 11, 12]
-                            }
-                        },
-                        b: {
-                            filter: {
-                                id: 10
                             },
-                            style: {
-                                color: [1, 2, 3]
+                            b: {
+                                filter: {
+                                    id: 10
+                                },
+                                style: {
+                                    color: [1, 2, 3]
+                                }
                             }
-                        }
+
+                        },
                     }
 
                 }
@@ -232,7 +275,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                 properties: {
                     kind: 'highway',
                     name: 'FDR',
-                    id: 10
+                    id: 20
                 }
             },
             zoom: 3
@@ -240,11 +283,11 @@ describe('RuleGroup.findMatchingRules(context)', () => {
 
         it('returns a single object', () => {
             let rule = subject.root.findMatchingRules(context, true);
-            expect(typeof rule === 'object').toBe(true);
+            console.log(JSON.stringify(rule));
             expect(rule).toEqual({
-                color: [10, 11, 12],
-                order: 2,
-                visible: true
+                color: [1, 2, 3],
+                width: 20,
+                order: 1,
             });
         });
     });

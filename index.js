@@ -113,8 +113,7 @@ export class RuleTree extends Rule {
 
         if (rules.length > 1) {
             if (flatten === true) {
-                let parents = mergeStyles(rules.map( x =>  mergeStyles(x.parentStyles) ));
-                return parents;
+                return mergeWithDepth(rules.map(x => x.calculateStyled));
             } else {
                 builtStyles = rules.map( x => mergeStyles(x.calculateStyled));
             }
