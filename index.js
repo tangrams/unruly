@@ -4,10 +4,25 @@ const {match} = require('match-feature');
 
 export const whiteList = ['filter', 'style', 'geometry'];
 
+function sortRules(a, b) {
+    if (a.weight > b.weight) { return -1; }
+    if (a.weight < b.weight) { return 1; }
+    // this might not be need because the last one always
+    // wins, which is what we want anyway
+    if (a.weight === b.weight) {
+        if (a.position > b.position) { return -1; }
+        if (a.position < b.position) { return 1; }
+    }
+    return 0;
+
+}
+
 
 export function mergeWithDepth(matchingTrees) {
     let properties = {};
-
+    let style = {};
+    let orders;
+    let orderReset = 0;
 
     for (let x = 0; x < matchingTrees.length; x += 1) {
         let tree = matchingTrees[x];
@@ -30,23 +45,38 @@ export function mergeWithDepth(matchingTrees) {
     }
 
     for (let prop in properties)  {
-        properties[prop].sort((a, b) => {
+        properties[prop].sort(sortRules);
 
-            if (a.weight > b.weight) { return -1; }
-            if (a.weight < b.weight) { return 1; }
-            // this might not be need because the last one always
-            // wins, which is what we want anyway
-            if (a.weight === b.weight) {
-                if (a.position > b.position) { return -1; }
-                if (a.position < b.position) { return 1; }
-            }
-            return 0;
-        });
+        // style.visible = !styles.some(style => style.visible === false);
+        if (prop === 'visible') {
+            style[prop] = !properties[prop].some(x => x.value === false);
+        }
 
-        properties[prop] = properties[prop][0].value;
+        if (prop === 'order') {
+            orders = properties[prop].map(x => x.value);
+            continue;
+        }
+
+        if (prop === 'orderReset') {
+            orderReset = properties[prop][0].weight;
+            continue;
+        }
+
+        style[prop] = properties[prop][0].value;
     }
 
-    return properties;
+    if (orders) {
+        orders = orders.slice(orderReset);
+
+        if (orders.length <= 1) {
+            style.order = orders[0];
+        } else {
+            style.order = calculateOrder(orders);
+        }
+    }
+
+
+    return style;
 }
 
 

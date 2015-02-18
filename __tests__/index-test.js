@@ -53,6 +53,7 @@ describe('.mergeWithDepth()', () => {
             [
                 {
                     "width": 10,
+                    "order": 1,
                     "color": [1, 2, 3]
                 },
                 {
@@ -61,18 +62,21 @@ describe('.mergeWithDepth()', () => {
                 },
                 {
                     "width": 20,
+                    "orderReset": true,
+                    "order": 1,
                     "a": 'b',
                     "color": [2.71828, 2.71828, 2.71828]
                 }
             ],
             [
                 {
+                    "order": 1,
                     "width": 10,
                     "color": [1, 2, 3]
                 },
                 {
                     "width": 10,
-                    "order": -1,
+                    "order": 1,
                     "a": "x",
                     "color": [7, 8, 9]
                 }
@@ -82,7 +86,7 @@ describe('.mergeWithDepth()', () => {
         it('returns the correct object', () => {
             expect(mergeWithDepth(subject)).toEqual({
                 width: 20,
-                order: -1,
+                order: 3,
                 a: 'b',
                 color: [2.71828, 2.71828, 2.71828]
             });
