@@ -4,6 +4,52 @@ const {match} = require('match-feature');
 
 export const whiteList = ['filter', 'style', 'geometry'];
 
+
+export function mergeWithDepth(matchingTrees) {
+    let properties = {};
+
+
+    for (let x = 0; x < matchingTrees.length; x += 1) {
+        let tree = matchingTrees[x];
+
+        for (let i = 0; i < tree.length; i +=1 ) {
+            let style = tree[i];
+
+            for (let key in style) {
+                if (!Array.isArray(properties[key])) {
+                    properties[key] = [];
+                }
+                properties[key].push({
+                    key: key,
+                    value: style[key],
+                    position: x,
+                    weight: i,
+                });
+            }
+        }
+    }
+
+    for (let prop in properties)  {
+        properties[prop].sort((a, b) => {
+
+            if (a.weight > b.weight) { return -1; }
+            if (a.weight < b.weight) { return 1; }
+            // this might not be need because the last one always
+            // wins, which is what we want anyway
+            if (a.weight === b.weight) {
+                if (a.position > b.position) { return -1; }
+                if (a.position < b.position) { return 1; }
+            }
+            return 0;
+        });
+
+        properties[prop] = properties[prop][0].value;
+    }
+
+    return properties;
+}
+
+
 class Rule {
 
     constructor(name, parent, style, filter) {

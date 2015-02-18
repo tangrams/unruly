@@ -25,6 +25,31 @@ describe('RuleGroup', () => {
     });
 });
 
+describe('.mergeWithDepth()', () => {
+    let subject = [
+        [ { a: 0.001 }, { b: 2 }, { c: 3 }, { d: 4 } ],
+        [ { a: 3.14 }, { d: 3 }, { a: 1 }, { b: 2 }],
+        [ { b: 'y' }, { a: 'x' }, { b: 0.0003 }, { c: 10 }],
+        [ { b: 3.14 }, { a: 2.71828 }, { b: 0.0001 }, { d: 'x' }]
+    ];
+
+    const {mergeWithDepth} = require('../index');
+
+    describe('when given an array of arrays to merged', () => {
+
+        it('returns a single object', () => {
+            let result = mergeWithDepth(subject);
+            expect(result).toEqual({
+                a: 1,
+                b: 2,
+                c: 10,
+                d: 'x'
+            });
+        });
+    });
+
+});
+
 describe('.cloneStyle()', () => {
     const {cloneStyle} = require('../index');
 
@@ -154,7 +179,6 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                         },
                         style: {
                             order: 1,
-                            width: 20,
                             color: [3.14, 3.14, 3.14]
                         },
                         a: {
@@ -162,6 +186,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                                 name: 'FDR'
                             },
                             style: {
+                                width: 20,
                                 color: [2.71828, 2.71828, 2.71828]
                             }
                         }
@@ -178,7 +203,16 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                                 id: 10
                              },
                             style: {
+                                width: 10,
                                 color: [10, 11, 12]
+                            }
+                        },
+                        b: {
+                            filter: {
+                                id: 10
+                            },
+                            style: {
+                                color: [1, 2, 3]
                             }
                         }
                     }
