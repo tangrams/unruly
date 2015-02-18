@@ -25,7 +25,7 @@ describe('RuleGroup', () => {
     });
 });
 
-describe.only('.mergeWithDepth()', () => {
+describe('.mergeWithDepth()', () => {
     let subject = [
         [ { a: 0.001 }, { b: 2 }, { c: 3 }, { d: 4 } ],
         [ { a: 3.14 }, { d: 3 }, { a: 1 }, { b: 2 }],
@@ -275,7 +275,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
                 properties: {
                     kind: 'highway',
                     name: 'FDR',
-                    id: 20
+                    id: 10
                 }
             },
             zoom: 3
@@ -283,7 +283,6 @@ describe('RuleGroup.findMatchingRules(context)', () => {
 
         it('returns a single object', () => {
             let rule = subject.root.findMatchingRules(context, true);
-            console.log(JSON.stringify(rule));
             expect(rule).toEqual({
                 color: [1, 2, 3],
                 width: 20,
