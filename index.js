@@ -21,7 +21,7 @@ function sortRules(a, b) {
 export function mergeWithDepth(matchingTrees) {
     let properties = {};
     let style = {};
-    let orders;
+    let deepestOrder;
     let orderReset = 0;
 
     for (let x = 0; x < matchingTrees.length; x += 1) {
@@ -47,13 +47,13 @@ export function mergeWithDepth(matchingTrees) {
     for (let prop in properties)  {
         properties[prop].sort(sortRules);
 
-        // style.visible = !styles.some(style => style.visible === false);
         if (prop === 'visible') {
             style[prop] = !properties[prop].some(x => x.value === false);
+            continue;
         }
 
         if (prop === 'order') {
-            orders = properties[prop].map(x => x.value);
+            deepestOrder = properties[prop][0];
             continue;
         }
 
@@ -65,7 +65,11 @@ export function mergeWithDepth(matchingTrees) {
         style[prop] = properties[prop][0].value;
     }
 
-    if (orders) {
+    if (deepestOrder) {
+        let matchingOrderTree = matchingTrees[deepestOrder.position];
+
+        let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
+
         orders = orders.slice(orderReset);
 
         if (orders.length <= 1) {
@@ -93,7 +97,7 @@ class Rule {
     }
 
     buildStyle() {
-        this.calculateStyled = calculateStyle(this);
+        this.calculatedStyle = calculateStyle(this);
     }
 
     buildFilter() {
@@ -104,8 +108,8 @@ class Rule {
     }
 
     gatherParentStyles() {
-        this.parentStyles = this.calculateStyled.slice(
-            0, this.calculateStyled.length - 1
+        this.parentStyles = this.calculatedStyle.slice(
+            0, this.calculatedStyle.length - 1
         );
     }
 
@@ -137,21 +141,20 @@ export class RuleTree extends Rule {
     }
 
     findMatchingRules(context, flatten = false) {
-        let rules = [], builtStyles = [];
+        let rules  = [],
+            styles = [];
 
         matchFeature(context, this.rules, rules);
 
-        if (rules.length > 1) {
+        if (rules.length > 0) {
             if (flatten === true) {
-                return mergeWithDepth(rules.map(x => x.calculateStyled));
+                styles = [mergeWithDepth(rules.map(x => x.calculatedStyle))];
             } else {
-                builtStyles = rules.map( x => mergeStyles(x.calculateStyled));
+                styles = rules.map( x => mergeStyles(x.calculatedStyle));
             }
-        } else if (rules.length === 1) {
-            builtStyles = mergeStyles(rules[0].calculatedStyled);
         }
 
-        return builtStyles;
+        return styles;
     }
 
 }
@@ -299,7 +302,9 @@ export function parseRules(rules) {
 
     for (let key in rules) {
         let rule = rules[key];
-        ruleTrees[key] = parseRuleTree(key, rule);
+        let root = new RuleTree({name: key});
+        parseRuleTree(key, rule, root);
+        ruleTrees[key] = root;
     }
 
     return ruleTrees;
@@ -307,8 +312,7 @@ export function parseRules(rules) {
 
 
 function doesMatch(filter, context) {
-    return ((typeof filter === 'function' && filter(context)) ||
-            (filter == null));
+    return ((typeof filter === 'function' && filter(context)) || (filter == null));
 }
 
 export function matchFeature(context, rules, collectedRules) {
@@ -323,7 +327,10 @@ export function matchFeature(context, rules, collectedRules) {
 
             if (doesMatch(current.filter, context)) {
                 matched = true;
-                collectedRules.push(current);
+                if (current.style) {
+                    collectedRules.push(current);
+                }
+
             }
 
         } else if (current instanceof RuleTree) {
@@ -336,7 +343,7 @@ export function matchFeature(context, rules, collectedRules) {
                     collectedRules
                 );
 
-                if (!childMatched) {
+                if (!childMatched && current.style) {
                     collectedRules.push(current);
                 }
             }

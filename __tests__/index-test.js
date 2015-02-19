@@ -58,12 +58,12 @@ describe('.mergeWithDepth()', () => {
                 },
                 {
                     "order": 1,
+                    "orderReset": true,
                     "color": [3.14, 3.14, 3.14]
                 },
                 {
                     "width": 20,
-                    "orderReset": true,
-                    "order": 1,
+                    "order": 3,
                     "a": 'b',
                     "color": [2.71828, 2.71828, 2.71828]
                 }
@@ -86,7 +86,7 @@ describe('.mergeWithDepth()', () => {
         it('returns the correct object', () => {
             expect(mergeWithDepth(subject)).toEqual({
                 width: 20,
-                order: 3,
+                order: 4,
                 a: 'b',
                 color: [2.71828, 2.71828, 2.71828]
             });
@@ -135,7 +135,7 @@ describe('.parseRules(rules)', () => {
                 number += 1;
             });
 
-            expect(number).toEqual(4);
+            expect(number).toEqual(5);
         });
     });
 });
@@ -295,7 +295,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
         });
     });
 
-    describe('when the feature is a highway and is named FDR', () => {
+    describe.only('when the feature is a highway and is named FDR', () => {
         const context = {
             feature: {
                 properties: {
