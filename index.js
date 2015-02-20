@@ -18,6 +18,12 @@ function sortRules(a, b) {
 }
 
 
+export let ruleCache = {};
+
+function cacheKey (rules) {
+    return rules.map(r => r.id).join('/');
+}
+
 export function mergeWithDepth(matchingTrees) {
     let properties = {};
     let style = {};
@@ -87,6 +93,7 @@ export function mergeWithDepth(matchingTrees) {
 class Rule {
 
     constructor(name, parent, style, filter) {
+        this.id = Rule.id++;
         this.name = name;
         this.style = style;
         this.filter = filter;
@@ -122,6 +129,8 @@ class Rule {
 
 }
 
+Rule.id = 0;
+
 
 export class RuleLeaf extends Rule {
     constructor({name, parent, style, filter}) {
@@ -141,20 +150,22 @@ export class RuleTree extends Rule {
     }
 
     findMatchingRules(context, flatten = false) {
-        let rules  = [],
-            styles = [];
+        let rules  = [];
 
         matchFeature(context, this.rules, rules);
 
         if (rules.length > 0) {
             if (flatten === true) {
-                styles = [mergeWithDepth(rules.map(x => x.calculatedStyle))];
+                let key = cacheKey(rules);
+
+                if (!ruleCache[key]) {
+                    ruleCache[key] = [mergeWithDepth(rules.map(x => x.calculatedStyle))];
+                }
+                return ruleCache[key];
             } else {
-                styles = rules.map( x => mergeStyles(x.calculatedStyle));
+                return rules.map( x => mergeStyles(x.calculatedStyle));
             }
         }
-
-        return styles;
     }
 
 }
