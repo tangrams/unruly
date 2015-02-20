@@ -321,7 +321,8 @@ export function matchFeature(context, rules, collectedRules) {
 
     if (rules.length === 0) { return; }
 
-    for (let current of rules) {
+    for (let r=0; r < rules.length; r++) {
+        let current = rules[r];
 
         if (current instanceof RuleLeaf) {
 
