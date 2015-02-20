@@ -11,11 +11,10 @@ function cacheKey (rules) {
 }
 
 export function mergeWithDepth(matchingTrees, context) {
-    let style = {};
+    let style = {
+        visible: true
+    };
     let deepestOrder;
-
-
-    style.visible = true;
 
     // Find deepest tree
     matchingTrees.sort((a, b) => a.length > b.length ? -1 : (b.length > a.length ? 1 : 0));
@@ -58,12 +57,15 @@ export function mergeWithDepth(matchingTrees, context) {
         }
         else {
             let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
-            orders = orders.slice(style.orderReset);
-            if (orders.length <= 1) {
-                style.order = orders[0];
+            style.order = orders.slice(style.orderReset);
+
+            // Order can be cached if it is only a single value
+            if (style.order.length === 1 && typeof style.order[0] === 'number') {
+                style.order = style.order[0];
             }
-            else {
-                style.order = calculateOrder(orders, context);
+            // Or if there are no function dependencies
+            else if (!style.order.some(v => typeof v === 'function')) {
+                style.order = calculateOrder(style.order, context);
             }
         }
     }
@@ -224,7 +226,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 
     for (let order of orders) {
         if (typeof order === 'function') {
-            order = order();
+            order = order(context);
         } else {
             order = parseFloat(order);
         }
