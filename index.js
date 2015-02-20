@@ -67,13 +67,19 @@ export function mergeWithDepth(matchingTrees) {
     // Order must be calculated based on the deepest tree that had an order property
     if (deepestOrder !== undefined) {
         let matchingOrderTree = matchingTrees[deepestOrder];
-        let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
-        orders = orders.slice(style.orderReset);
 
-        if (orders.length <= 1) {
-            style.order = orders[0];
-        } else {
-            style.order = calculateOrder(orders);
+        if (matchingOrderTree.length <= 1) {
+            style.order = matchingOrderTree[0].order;
+        }
+        else {
+            let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
+            orders = orders.slice(style.orderReset);
+            if (orders.length <= 1) {
+                style.order = orders[0];
+            }
+            else {
+                style.order = calculateOrder(orders);
+            }
         }
     }
 
