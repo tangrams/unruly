@@ -4,31 +4,16 @@ const {match} = require('match-feature');
 
 export const whiteList = ['filter', 'style', 'geometry'];
 
-function sortRules(a, b) {
-    if (a.weight > b.weight) { return -1; }
-    if (a.weight < b.weight) { return 1; }
-    // this might not be need because the last one always
-    // wins, which is what we want anyway
-    if (a.weight === b.weight) {
-        if (a.position > b.position) { return -1; }
-        if (a.position < b.position) { return 1; }
-    }
-    return 0;
-
-}
-
-
 export let ruleCache = {};
 
 function cacheKey (rules) {
     return rules.map(r => r.id).join('/');
 }
 
-export function mergeWithDepth(matchingTrees) {
-    let properties = {};
+export function mergeWithDepth(matchingTrees, context) {
     let style = {};
     let deepestOrder;
-    let orderReset = 0;
+
 
     style.visible = true;
 
@@ -78,7 +63,7 @@ export function mergeWithDepth(matchingTrees) {
                 style.order = orders[0];
             }
             else {
-                style.order = calculateOrder(orders);
+                style.order = calculateOrder(orders, context);
             }
         }
     }
@@ -155,11 +140,11 @@ export class RuleTree extends Rule {
             if (flatten === true) {
                 let key = cacheKey(rules);
                 if (!ruleCache[key]) {
-                    ruleCache[key] = mergeWithDepth(rules.map(x => x.calculatedStyle));
+                    ruleCache[key] = mergeWithDepth(rules.map(x => x.calculatedStyle), context);
                 }
                 return ruleCache[key];
             } else {
-                return rules.map(x => mergeStyles(x.calculatedStyle));
+                return rules.map(x => mergeStyles(x.calculatedStyle, context));
             }
         }
     }
@@ -272,7 +257,7 @@ export function mergeStyles(styles) {
     if (style.order.length === 1 && typeof style.order[0] === 'number') {
         style.order = style.order[0];
     } else {
-        style.order = calculateOrder(style.order);
+        style.order = calculateOrder(style.order, context);
     }
     return style;
 }
