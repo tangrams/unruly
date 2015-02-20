@@ -30,53 +30,45 @@ export function mergeWithDepth(matchingTrees) {
     let deepestOrder;
     let orderReset = 0;
 
-    for (let x = 0; x < matchingTrees.length; x += 1) {
-        let tree = matchingTrees[x];
+    style.visible = true;
 
-        for (let i = 0; i < tree.length; i +=1 ) {
-            let style = tree[i];
+    // Find deepest tree
+    matchingTrees.sort((a, b) => a.length > b.length ? -1 : (b.length > a.length ? 1 : 0));
+    let len = matchingTrees[0].length;
 
-            for (let key in style) {
-                if (!Array.isArray(properties[key])) {
-                    properties[key] = [];
+    // Iterate trees in parallel
+    for (let x = 0; x < len; x++) {
+        for (let t=0; t < matchingTrees.length; t++) {
+            // Get style for this tree at current depth
+            let treeStyle = matchingTrees[t][x];
+            if (!treeStyle) {
+                continue;
+            }
+
+            for (let key in treeStyle) {
+                // `visible` property is only true if all matching rules are visible
+                if (key === 'visible') {
+                    style[key] = style[key] && treeStyle[key];
                 }
-                properties[key].push({
-                    key: key,
-                    value: style[key],
-                    position: x,
-                    weight: i,
-                });
+                // Regular properties are just copied, deepest tree wins
+                else {
+                    style[key] = treeStyle[key];
+                }
+
+                // Make note of the deepest tree that had an order property
+                if (key === 'order') {
+                    deepestOrder = t;
+                }
+
             }
         }
     }
 
-    for (let prop in properties)  {
-        properties[prop].sort(sortRules);
-
-        if (prop === 'visible') {
-            style[prop] = !properties[prop].some(x => x.value === false);
-            continue;
-        }
-
-        if (prop === 'order') {
-            deepestOrder = properties[prop][0];
-            continue;
-        }
-
-        if (prop === 'orderReset') {
-            orderReset = properties[prop][0].weight;
-            continue;
-        }
-
-        style[prop] = properties[prop][0].value;
-    }
-
-    if (deepestOrder) {
-        let matchingOrderTree = matchingTrees[deepestOrder.position];
-
+    // Order must be calculated based on the deepest tree that had an order property
+    if (deepestOrder !== undefined) {
+        let matchingOrderTree = matchingTrees[deepestOrder];
         let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
-
-        orders = orders.slice(orderReset);
+        orders = orders.slice(style.orderReset);
 
         if (orders.length <= 1) {
             style.order = orders[0];
