@@ -77,7 +77,6 @@ export function mergeWithDepth(matchingTrees) {
         }
     }
 
-
     return style;
 }
 
@@ -149,13 +148,12 @@ export class RuleTree extends Rule {
         if (rules.length > 0) {
             if (flatten === true) {
                 let key = cacheKey(rules);
-
                 if (!ruleCache[key]) {
-                    ruleCache[key] = [mergeWithDepth(rules.map(x => x.calculatedStyle))];
+                    ruleCache[key] = mergeWithDepth(rules.map(x => x.calculatedStyle));
                 }
                 return ruleCache[key];
             } else {
-                return rules.map( x => mergeStyles(x.calculatedStyle));
+                return rules.map(x => mergeStyles(x.calculatedStyle));
             }
         }
     }
