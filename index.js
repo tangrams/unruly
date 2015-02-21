@@ -10,11 +10,10 @@ function cacheKey (rules) {
     return rules.map(r => r.id).join('/');
 }
 
-export function mergeWithDepth(matchingTrees, context) {
-    let style = {
-        visible: true
-    };
+export function mergeTrees(matchingTrees, context) {
+    let style = {};
     let deepestOrder;
+    let visible = true;
 
     // Find deepest tree
     matchingTrees.sort((a, b) => a.length > b.length ? -1 : (b.length > a.length ? 1 : 0));
@@ -22,31 +21,27 @@ export function mergeWithDepth(matchingTrees, context) {
 
     // Iterate trees in parallel
     for (let x = 0; x < len; x++) {
-        for (let t=0; t < matchingTrees.length; t++) {
-            // Get style for this tree at current depth
-            let treeStyle = matchingTrees[t][x];
-            if (!treeStyle) {
+        let styles = matchingTrees.map(tree => tree[x]);
+        mergeObjects(style, ...styles);
+
+        for (let i=0; i < styles.length; i++) {
+            if (!styles[i]) {
                 continue;
             }
 
-            for (let key in treeStyle) {
-                // `visible` property is only true if all matching rules are visible
-                if (key === 'visible') {
-                    style[key] = style[key] && treeStyle[key];
-                }
-                // Regular properties are just copied, deepest tree wins
-                else {
-                    style[key] = treeStyle[key];
-                }
+            // `visible` property is only true if all matching rules are visible
+            if (styles[i].visible === false) {
+                visible = false;
+            }
 
-                // Make note of the deepest tree that had an order property
-                if (key === 'order') {
-                    deepestOrder = t;
-                }
-
+            // Make note of the deepest tree that had an order property
+            if (styles[i].order !== undefined) {
+                deepestOrder = i;
             }
         }
     }
+
+    style.visible = visible;
 
     // Order must be calculated based on the deepest tree that had an order property
     if (deepestOrder !== undefined) {
@@ -56,8 +51,8 @@ export function mergeWithDepth(matchingTrees, context) {
             style.order = matchingOrderTree[0].order;
         }
         else {
-            let orders = matchingOrderTree.filter(x => x.order).map(x => x.order);
-            style.order = orders.slice(style.orderReset);
+            style.order = matchingOrderTree.filter(x => x && x.order).map(x => x.order);
+            style.order = style.order.slice(style.orderReset);
 
             // Order can be cached if it is only a single value
             if (style.order.length === 1 && typeof style.order[0] === 'number') {
@@ -142,7 +137,7 @@ export class RuleTree extends Rule {
             if (flatten === true) {
                 let key = cacheKey(rules);
                 if (!ruleCache[key]) {
-                    ruleCache[key] = mergeWithDepth(rules.map(x => x.calculatedStyle), context);
+                    ruleCache[key] = mergeTrees(rules.map(x => x.calculatedStyle), context);
                 }
                 return ruleCache[key];
             } else {
@@ -205,13 +200,16 @@ export function calculateStyle(rule, styles = []) {
     return styles;
 }
 
-export function cloneStyle(newObj, ...sources) {
+export function mergeObjects(newObj, ...sources) {
 
     for (let source of sources) {
+        if (!source) {
+            continue;
+        }
         for (let key in source) {
             let value = source[key];
             if (typeof value === 'object' && !Array.isArray(value)) {
-                newObj[key] = cloneStyle(newObj[key] || {}, value);
+                newObj[key] = mergeObjects(newObj[key] || {}, value);
             } else {
                 newObj[key] = value;
             }
@@ -243,7 +241,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 export function mergeStyles(styles) {
 
     styles = styles.filter(x => x);
-    let style = cloneStyle({}, ...styles);
+    let style = mergeObjects({}, ...styles);
     style.visible = !styles.some(x => x.visible === false);
 
     let orderStart = 0;
