@@ -74,7 +74,7 @@ class Rule {
     constructor(name, parent, style, filter) {
         this.id = Rule.id++;
         this.name = name;
-        this.style = style;
+        this.style = style || {}; // TODO: would be better to skip null styles later when merging
         this.filter = filter;
         this.parent = parent;
         this.buildFilter();
