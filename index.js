@@ -6,37 +6,50 @@ export const whiteList = ['filter', 'style', 'geometry'];
 
 export let ruleCache = {};
 
-function cacheKey (rules) {
-    return rules.map(r => r.id).join('/');
-}
+let treeStyles = []; // one-time allocated object reused during style merging
 
-export function mergeTrees(matchingTrees, context) {
+export function mergeTrees(trees, numTrees, context) {
     let style = {};
-    let deepestOrder;
+    let deepestOrder, orderReset;
     let visible = true;
 
     // Find deepest tree
-    matchingTrees.sort((a, b) => a.length > b.length ? -1 : (b.length > a.length ? 1 : 0));
-    let len = matchingTrees[0].length;
+    let len = 0;
+    for (let t=0; t < numTrees; t++) {
+        if (trees[t].length > len) {
+            len = trees[t].length;
+        }
+    }
 
     // Iterate trees in parallel
     for (let x = 0; x < len; x++) {
-        let styles = matchingTrees.map(tree => tree[x]);
-        mergeObjects(style, ...styles);
+        // Collect current matching tree styles
+        for (let t=0; t < numTrees; t++) {
+            treeStyles[t] = trees[t][x];
+        }
+        let styles = treeStyles;
 
-        for (let i=0; i < styles.length; i++) {
-            if (!styles[i]) {
+        // Merge all styles at this level together
+        mergeObjects(style, styles, numTrees);
+
+        // Additional property-specific logic
+        for (let t=0; t < numTrees; t++) {
+            if (!styles[t]) {
                 continue;
             }
 
             // `visible` property is only true if all matching rules are visible
-            if (styles[i].visible === false) {
+            if (styles[t].visible === false) {
                 visible = false;
             }
 
-            // Make note of the deepest tree that had an order property
-            if (styles[i].order !== undefined) {
-                deepestOrder = i;
+            // Make note of the style positions of order-related properties
+            if (styles[t].order !== undefined) {
+                deepestOrder = t;
+            }
+
+            if (styles[t].orderReset !== undefined) {
+                orderReset = x;
             }
         }
     }
@@ -45,14 +58,18 @@ export function mergeTrees(matchingTrees, context) {
 
     // Order must be calculated based on the deepest tree that had an order property
     if (deepestOrder !== undefined) {
-        let matchingOrderTree = matchingTrees[deepestOrder];
+        let orderTree = trees[deepestOrder];
 
-        if (matchingOrderTree.length <= 1) {
-            style.order = matchingOrderTree[0].order;
+        if (orderTree.length <= 1) {
+            style.order = orderTree[0].order;
         }
         else {
-            style.order = matchingOrderTree.filter(x => x && x.order).map(x => x.order);
-            style.order = style.order.slice(style.orderReset);
+            style.order = [];
+            for (let x = orderReset || 0; x < orderTree.length; x++) {
+                if (orderTree[x] && orderTree[x].order) {
+                    style.order.push(orderTree[x].order);
+                }
+            }
 
             // Order can be cached if it is only a single value
             if (style.order.length === 1 && typeof style.order[0] === 'number') {
@@ -102,7 +119,7 @@ class Rule {
     toJSON() {
         return {
             name: this.name,
-            sytle: this.style
+            style: this.style
         };
     }
 
@@ -118,6 +135,10 @@ export class RuleLeaf extends Rule {
 
 }
 
+// One-time allocated objects that are reused during the rule matching process
+let state = {};
+let styles = [];
+
 export class RuleTree extends Rule {
     constructor({name, parent, style, rules, filter}) {
         super(name, parent, style, filter);
@@ -129,15 +150,16 @@ export class RuleTree extends Rule {
     }
 
     findMatchingRules(context, flatten = false) {
-        let rules  = [];
+        state.key = '';         // cache key
+        state.numStyles = 0;    // number of styles matched so far
 
-        matchFeature(context, this.rules, rules);
+        matchFeature(context, this.rules, styles, state);
+        let key = state.key;
 
-        if (rules.length > 0) {
+        if (state.numStyles > 0) {
             if (flatten === true) {
-                let key = cacheKey(rules);
                 if (!ruleCache[key]) {
-                    ruleCache[key] = mergeTrees(rules.map(x => x.calculatedStyle), context);
+                    ruleCache[key] = mergeTrees(styles, state.numStyles, context);
                 }
                 return ruleCache[key];
             } else {
@@ -200,21 +222,26 @@ export function calculateStyle(rule, styles = []) {
     return styles;
 }
 
-export function mergeObjects(newObj, ...sources) {
+// Deep merge an array of objects into a target
+// Array length is passed explicitly so `sources` can be a one-time allocated, reusable array
+export function mergeObjects(newObj, sources, numSources) {
+    for (let s=0; s < numSources; s++) {
+        mergeObject(newObj, sources[s]);
+    }
+    return newObj;
+}
 
-    for (let source of sources) {
-        if (!source) {
-            continue;
-        }
+// Deep merge an object into a target
+export function mergeObject(newObj, source) {
+    if (source) {
         for (let key in source) {
             let value = source[key];
             if (typeof value === 'object' && !Array.isArray(value)) {
-                newObj[key] = mergeObjects(newObj[key] || {}, value);
+                newObj[key] = mergeObject(newObj[key] || {}, value);
             } else {
                 newObj[key] = value;
             }
         }
-
     }
     return newObj;
 }
@@ -241,7 +268,7 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 export function mergeStyles(styles) {
 
     styles = styles.filter(x => x);
-    let style = mergeObjects({}, ...styles);
+    let style = mergeObjects({}, styles, styles.length);
     style.visible = !styles.some(x => x.visible === false);
 
     let orderStart = 0;
@@ -303,11 +330,11 @@ export function parseRules(rules) {
 }
 
 
-function doesMatch(filter, context) {
+export function doesMatch(filter, context) {
     return ((typeof filter === 'function' && filter(context)) || (filter == null));
 }
 
-export function matchFeature(context, rules, collectedRules) {
+export function matchFeature(context, rules, collectedStyles, state = { key: '', numStyles: 0 }) {
     let matched = false;
     let childMatched = false;
 
@@ -321,7 +348,8 @@ export function matchFeature(context, rules, collectedRules) {
             if (doesMatch(current.filter, context)) {
                 matched = true;
                 if (current.style) {
-                    collectedRules.push(current);
+                    collectedStyles[state.numStyles++] = current.calculatedStyle;
+                    state.key += current.id + '/';
                 }
 
             }
@@ -333,11 +361,13 @@ export function matchFeature(context, rules, collectedRules) {
                 childMatched = matchFeature(
                     context,
                     current.rules,
-                    collectedRules
+                    collectedStyles,
+                    state
                 );
 
                 if (!childMatched && current.style) {
-                    collectedRules.push(current);
+                    collectedStyles[state.numStyles++] = current.calculatedStyle;
+                    state.key += current.id + '/';
                 }
             }
         }
