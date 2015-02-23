@@ -149,7 +149,7 @@ export class RuleTree extends Rule {
         this.rules.push(rule);
     }
 
-    findMatchingRules(context, flatten = false) {
+    findMatchingRules(context) {
         state.key = '';         // cache key
         state.numStyles = 0;    // number of styles matched so far
 
@@ -157,15 +157,12 @@ export class RuleTree extends Rule {
         let key = state.key;
 
         if (state.numStyles > 0) {
-            if (flatten === true) {
-                if (!ruleCache[key]) {
-                    ruleCache[key] = mergeTrees(styles, state.numStyles, context);
-                }
-                return ruleCache[key];
-            } else {
-                return rules.map(x => mergeStyles(x.calculatedStyle, context));
+            if (!ruleCache[key]) {
+                ruleCache[key] = mergeTrees(styles, state.numStyles, context);
             }
+            return ruleCache[key];
         }
+        return {};
     }
 
 }
