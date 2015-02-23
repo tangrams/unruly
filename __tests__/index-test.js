@@ -274,7 +274,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
     });
 
     describe('when the context matches and we ask to merge the sibling rules', () => {
-        const context = {
+        let context = {
             feature: {
                 properties: {
                     kind: 'highway',
@@ -286,7 +286,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
         };
 
         it('returns a single object', () => {
-            let rule = subject.root.findMatchingRules(context, true);
+            let rule = subject.root.findMatchingRules(context);
             expect(rule).toEqual({
                 color: [1, 2, 3],
                 width: 20,
@@ -296,7 +296,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
     });
 
     describe.only('when the feature is a highway and is named FDR', () => {
-        const context = {
+        let context = {
             feature: {
                 properties: {
                     kind: 'highway',
@@ -309,12 +309,17 @@ describe('RuleGroup.findMatchingRules(context)', () => {
 
         it('returns the correct number of matching rules', () => {
             let rules = subject.root.findMatchingRules(context);
-            expect(rules.length).toEqual(2);
+            expect(rules).toEqual({
+                color: [1, 2, 3],
+                order: 1,
+                visible: true,
+                width: 20
+            });
         });
     });
 
     describe('when the feature is not a road', () => {
-        const context = {
+        let context = {
             feature: {
                 properties: {
                     kind: 'aeroway'
@@ -324,7 +329,7 @@ describe('RuleGroup.findMatchingRules(context)', () => {
 
         it('returns an empty array of rules', () => {
             const rule = subject.root.findMatchingRules(context);
-            expect(rule.length).toBe(0);
+            expect(rule.getOwnPropertyNames().length).toEqual(0);
         });
     });
 

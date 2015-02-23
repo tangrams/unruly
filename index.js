@@ -128,22 +128,20 @@ export class RuleTree extends Rule {
         this.rules.push(rule);
     }
 
-    findMatchingRules(context, flatten = false) {
+    findMatchingRules(context) {
         let rules  = [];
 
         matchFeature(context, this.rules, rules);
 
         if (rules.length > 0) {
-            if (flatten === true) {
-                let key = cacheKey(rules);
-                if (!ruleCache[key]) {
-                    ruleCache[key] = mergeTrees(rules.map(x => x.calculatedStyle), context);
-                }
-                return ruleCache[key];
-            } else {
-                return rules.map(x => mergeStyles(x.calculatedStyle, context));
+
+            let key = cacheKey(rules);
+            if (!ruleCache[key]) {
+                ruleCache[key] = mergeTrees(rules.map(x => x.calculatedStyle), context);
             }
+            return ruleCache[key];
         }
+        return {};
     }
 
 }
