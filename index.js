@@ -13,7 +13,7 @@ function cacheKey (rules) {
 export function mergeTrees(matchingTrees, context) {
     let style = {};
     let deepestOrder, orderReset;
-    let visible = true;
+    let visible;
 
     // Find deepest tree
     matchingTrees.sort((a, b) => a.length > b.length ? -1 : (b.length > a.length ? 1 : 0));
@@ -32,6 +32,8 @@ export function mergeTrees(matchingTrees, context) {
             // `visible` property is only true if all matching rules are visible
             if (styles[i].visible === false) {
                 visible = false;
+            } else if (visible === undefined) {
+                visible = true;
             }
 
             // Make note of the style positions of order-related properties
@@ -43,6 +45,10 @@ export function mergeTrees(matchingTrees, context) {
                 orderReset = x;
             }
         }
+    }
+
+    if (visible === undefined) {
+        return null;
     }
 
     style.visible = visible;
@@ -82,12 +88,11 @@ class Rule {
     constructor(name, parent, style, filter) {
         this.id = Rule.id++;
         this.name = name;
-        this.style = style || {}; // TODO: would be better to skip null styles later when merging
+        this.style = style;
         this.filter = filter;
         this.parent = parent;
         this.buildFilter();
         this.buildStyle();
-        this.gatherParentStyles();
     }
 
     buildStyle() {
@@ -99,12 +104,6 @@ class Rule {
         if (type === 'object') {
             this.filter = match(this.filter);
         }
-    }
-
-    gatherParentStyles() {
-        this.parentStyles = this.calculatedStyle.slice(
-            0, this.calculatedStyle.length - 1
-        );
     }
 
     toJSON() {
@@ -138,18 +137,17 @@ export class RuleTree extends Rule {
 
     findMatchingRules(context) {
         let rules  = [];
-
-        matchFeature(context, this.rules, rules);
+        //TODO, should this function take a RuleTree
+        matchFeature(context, [this], rules);
 
         if (rules.length > 0) {
 
             let key = cacheKey(rules);
             if (!ruleCache[key]) {
-                ruleCache[key] = mergeTrees(rules.map(x => x.calculatedStyle), context);
+                ruleCache[key] = mergeTrees(rules.map(x => x && x.calculatedStyle), context);
             }
             return ruleCache[key];
         }
-        return {};
     }
 
 }
@@ -195,14 +193,16 @@ export function groupProps(obj) {
     return [whiteListed, nonWhiteListed];
 }
 
-export function calculateStyle(rule, styles = []) {
+export function calculateStyle(rule) {
 
-    walkUp(rule, (r) =>{
-        if (r.style) {
-            styles.push(r.style);
-        }
-    });
+    let styles  = [];
 
+    if (rule.parent) {
+        let cs = rule.parent.calculatedStyle || [];
+        styles.push(...cs);
+    }
+
+    styles.push(rule.style);
     return styles;
 }
 
@@ -268,6 +268,8 @@ export function parseRuleTree(name, rule, parent) {
             let property = nonWhiteListed[key];
             if (typeof property === 'object') {
                 parseRuleTree(key, property, r);
+            } else {
+                console.error('Property must be an object');
             }
         }
 
@@ -306,23 +308,20 @@ export function matchFeature(context, rules, collectedRules) {
 
             if (doesMatch(current.filter, context)) {
                 matched = true;
-                if (current.style) {
-                    collectedRules.push(current);
-                }
-
+                collectedRules.push(current);
             }
 
         } else if (current instanceof RuleTree) {
             if (doesMatch(current.filter, context)) {
-
                 matched = true;
+
                 childMatched = matchFeature(
                     context,
                     current.rules,
                     collectedRules
                 );
 
-                if (!childMatched && current.style) {
+                if (!childMatched) {
                     collectedRules.push(current);
                 }
             }
