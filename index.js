@@ -266,7 +266,14 @@ export function parseRuleTree(name, rule, parent) {
     let properties = {name, parent};
     let [whiteListed, nonWhiteListed] = groupProps(rule);
     let empty = isEmpty(nonWhiteListed);
-    let Create = empty ? RuleLeaf : RuleTree;
+    let Create;
+
+    if (empty && parent != null) {
+        Create = RuleLeaf;
+    } else {
+        Create = RuleTree;
+    }
+
     let r = new Create(Object.assign(properties, whiteListed));
 
     if (parent) {
@@ -292,9 +299,7 @@ export function parseRules(rules) {
 
     for (let key in rules) {
         let rule = rules[key];
-        let root = new RuleTree({name: key});
-        parseRuleTree(key, rule, root);
-        ruleTrees[key] = root;
+        ruleTrees[key] = parseRuleTree(key, rule);
     }
 
     return ruleTrees;
