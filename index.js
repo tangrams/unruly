@@ -12,7 +12,7 @@ function cacheKey (rules) {
 
 export function mergeTrees(matchingTrees, context) {
     let style = {};
-    let deepestOrder;
+    let deepestOrder, orderReset;
     let visible = true;
 
     // Find deepest tree
@@ -34,9 +34,13 @@ export function mergeTrees(matchingTrees, context) {
                 visible = false;
             }
 
-            // Make note of the deepest tree that had an order property
+            // Make note of the style positions of order-related properties
             if (styles[i].order !== undefined) {
                 deepestOrder = i;
+            }
+
+            if (styles[i].orderReset !== undefined) {
+                orderReset = x;
             }
         }
     }
@@ -45,14 +49,18 @@ export function mergeTrees(matchingTrees, context) {
 
     // Order must be calculated based on the deepest tree that had an order property
     if (deepestOrder !== undefined) {
-        let matchingOrderTree = matchingTrees[deepestOrder];
+        let orderTree = matchingTrees[deepestOrder];
 
-        if (matchingOrderTree.length <= 1) {
-            style.order = matchingOrderTree[0].order;
+        if (orderTree.length <= 1) {
+            style.order = orderTree[0].order;
         }
         else {
-            style.order = matchingOrderTree.filter(x => x && x.order).map(x => x.order);
-            style.order = style.order.slice(style.orderReset);
+            style.order = [];
+            for (let x = orderReset || 0; x < orderTree.length; x++) {
+                if (orderTree[x] && orderTree[x].order) {
+                    style.order.push(orderTree[x].order);
+                }
+            }
 
             // Order can be cached if it is only a single value
             if (style.order.length === 1 && typeof style.order[0] === 'number') {
