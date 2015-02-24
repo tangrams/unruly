@@ -174,7 +174,7 @@ describe('.groupProps()', () => {
 });
 
 describe('.calculateStyle()', () => {
-    let {calculateStyle} = require('../index');
+    const {calculateStyle} = require('../index');
 
     let a = {
         parent: null,
@@ -201,10 +201,35 @@ describe('.calculateStyle()', () => {
             [{ a: true }, { b: true }, { c: true }]
         );
     });
-
 });
 
-describe('RuleGroup.findMatchingRules(context)', () => {
+describe('parseRules', () => {
+    const {parseRules} = require('../index');
+    const {RuleTree}   = require('../index');
+
+    describe('when given a single rule', () => {
+
+        it('returns a tree', () => {
+            let subject = parseRules({
+                root: {
+                    filter: {
+                        id: 10
+                    },
+                    style: {
+                        color: [3.14, 3.14, 3.14]
+                    }
+                }
+            });
+
+            expect(subject instanceof RuleTree).toBe(true);
+            expect(typeof subject.findMatchingRules).toBe(true);
+
+        });
+    });
+});
+
+
+describe('RuleTree.findMatchingRules(context)', () => {
     let subject;
     const {parseRules} = require('../index');
 
