@@ -244,31 +244,6 @@ export function calculateOrder(orders, context = null, defaultOrder = 0) {
 }
 
 
-export function mergeStyles(styles) {
-
-    styles = styles.filter(x => x);
-    let style = mergeObjects({}, ...styles);
-    style.visible = !styles.some(x => x.visible === false);
-
-    let orderStart = 0;
-    for (let i = styles.length - 1; i >= 0; i -= 1) {
-        if (styles[i].orderReset) {
-            orderStart = i;
-            break;
-        }
-    }
-    style.order = styles.slice(orderStart).
-        filter(style => style.order).map(style => style.order);
-
-    if (style.order.length === 1 && typeof style.order[0] === 'number') {
-        style.order = style.order[0];
-    } else {
-        style.order = calculateOrder(style.order, context);
-    }
-    return style;
-}
-
-
 export function parseRuleTree(name, rule, parent) {
 
     let properties = {name, parent};
