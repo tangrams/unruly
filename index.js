@@ -2,7 +2,7 @@
 
 const {match} = require('match-feature');
 
-export const whiteList = ['filter', 'style', 'geometry'];
+export const whiteList = ['filter', 'style', 'geometry', 'properties'];
 
 export let ruleCache = {};
 
@@ -85,11 +85,12 @@ export function mergeTrees(matchingTrees, context) {
 
 class Rule {
 
-    constructor(name, parent, style, filter) {
+    constructor(name, parent, style, filter, properties) {
         this.id = Rule.id++;
         this.name = name;
         this.style = style;
         this.filter = filter;
+        this.properties = properties;
         this.parent = parent;
         this.buildFilter();
         this.buildStyle();
@@ -119,15 +120,15 @@ Rule.id = 0;
 
 
 export class RuleLeaf extends Rule {
-    constructor({name, parent, style, filter}) {
-        super(name, parent, style, filter);
+    constructor({name, parent, style, filter, properties}) {
+        super(name, parent, style, filter, properties);
     }
 
 }
 
 export class RuleTree extends Rule {
-    constructor({name, parent, style, rules, filter}) {
-        super(name, parent, style, filter);
+    constructor({name, parent, style, rules, filter, properties}) {
+        super(name, parent, style, filter, properties);
         this.rules = rules || [];
     }
 
@@ -303,6 +304,7 @@ export function matchFeature(context, rules, collectedRules) {
 
     for (let r=0; r < rules.length; r++) {
         let current = rules[r];
+        context.properties = current.properties;
 
         if (current instanceof RuleLeaf) {
 
@@ -326,6 +328,8 @@ export function matchFeature(context, rules, collectedRules) {
                 }
             }
         }
+
+        context.properties = null;
     }
 
     return matched;
