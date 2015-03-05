@@ -157,7 +157,7 @@ function isWhiteListed(key) {
 }
 
 function isEmpty(obj) {
-    return Object.getOwnPropertyNames(obj).length === 0;
+    return Object.keys(obj).length === 0;
 }
 
 export function walkUp(rule, cb) {

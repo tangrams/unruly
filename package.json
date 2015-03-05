@@ -6,22 +6,27 @@
   "scripts": {
     "test": "jest"
   },
-  "author": "Ivan Willig",
+  "author": "Mapzen",
   "license": "MIT",
   "dependencies": {
-    "match-feature": "tangrams/match-feature"
+    "match-feature": "tangrams/match-feature",
+    "source-map-support": "~0.2.9"
   },
   "devDependencies": {
     "jest": "~0.1.37",
     "benchmark": "~1.0.0",
     "jest-cli": "~0.2.2",
-    "react-tools": "~0.12.2",
-    "traceur": "0.0.84",
     "js-yaml": "~3.2.6",
-    "jshint": "~2.6.0"
+    "jshint": "~2.6.0",
+    "babelify": "~5.0.3",
+    "babel-jest": "~4.0.0"
   },
-  "jest": {
-    "setupEnvScriptFile": "./node_modules/traceur/bin/traceur-runtime.js",
-    "scriptPreprocessor": "<rootDir>/preprocessor.js"
-  }
+
+    "jest": {
+      "setupEnvScriptFile": "<rootDir>/node_modules/babel/browser-polyfill.js",
+      "scriptPreprocessor": "<rootDir>/node_modules/babel-jest",
+      "testFileExtensions": ["es6", "js"]
+
+    }
+
 }

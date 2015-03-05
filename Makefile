@@ -1,3 +1,8 @@
 
 lib/unruly.js: index.js
-	./node_modules/traceur/traceur --out lib/unruly.js  --modules commonjs index.js 
+	./node_modules/babel/bin/babel/index.js index.js --optional=runtime > lib/unruly.js
+
+clean:
+	rm lib/unruly.js
+
+.PHONY: clean

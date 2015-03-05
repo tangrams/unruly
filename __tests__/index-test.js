@@ -1,9 +1,7 @@
 'use strict';
-jest.dontMock('../index');
-jest.dontMock('./style');
-jest.dontMock('match-feature');
+jest.autoMockOff();
 
-describe('Rule', () => {
+describe('RuleLeaf', () => {
     const {RuleLeaf} = require('../index');
 
     it('returns an new instanceof', () => {
@@ -25,7 +23,7 @@ describe('RuleGroup', () => {
     });
 });
 
-xdescribe('.mergeWithDepth()', () => {
+describe('.mergeWithDepth()', () => {
     let subject = [
         [ { a: 0.001 }, { b: 2 }, { c: 3 }, { d: 4 } ],
         [ { a: 3.14 }, { d: 3 }, { a: 1 }, { b: 2 }],
@@ -33,13 +31,14 @@ xdescribe('.mergeWithDepth()', () => {
         [ { b: 3.14 }, { a: 2.71828 }, { b: 0.0001 }, { d: 'x' }]
     ];
 
-    const {mergeWithDepth} = require('../index');
+    const {mergeTrees} = require('../index');
 
     describe('when given an array of arrays to merged', () => {
 
         it('returns a single object', () => {
-            let result = mergeWithDepth(subject);
+            let result = mergeTrees(subject);
             expect(result).toEqual({
+                visible: true,
                 a: 1,
                 b: 2,
                 c: 10,
@@ -84,7 +83,9 @@ xdescribe('.mergeWithDepth()', () => {
         ];
 
         it('returns the correct object', () => {
-            expect(mergeWithDepth(subject)).toEqual({
+            expect(mergeTrees(subject)).toEqual({
+                visible: true,
+                orderReset: true,
                 width: 20,
                 order: 4,
                 a: 'b',
@@ -94,25 +95,6 @@ xdescribe('.mergeWithDepth()', () => {
 
     });
 
-});
-
-xdescribe('.cloneStyle()', () => {
-    const {cloneStyle} = require('../index');
-
-    describe('when given a deeply nested object',  () => {
-        it('merged the properies at any depth',  () => {
-            expect(cloneStyle(
-                {a: 3, c: 1, d: {a: 4, c: 10}},
-                {a: 2, b: 3, d: {d: ['a']}},
-                {a: 1, c: 4, d: {b: 5}}
-            )).toEqual({
-                a: 1,
-                b: 3,
-                c: 4,
-                d: { a: 4, b: 5, c: 10, d: ['a']}
-            });
-        });
-    });
 });
 
 describe('.parseRules(rules)', () => {
@@ -140,11 +122,6 @@ describe('.parseRules(rules)', () => {
     });
 });
 
-describe('.parseRuleTree()', () => {});
-
-
-
-describe('.buildFilter()', () => {});
 
 describe('.groupProps()', () => {
     let {groupProps} = require('../index');
@@ -348,7 +325,7 @@ describe('RuleTree.findMatchingRules(context)', () => {
             expect(subject.root instanceof RuleTree).toBe(true);
         });
 
-        describe.only('when there no style on the parent', () => {
+        describe('when there no style on the parent', () => {
             let subject = parseRules({
                 root: {
                     filter: {
