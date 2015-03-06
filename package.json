@@ -9,7 +9,7 @@
   "author": "Mapzen",
   "license": "MIT",
   "dependencies": {
-    "match-feature": "tangrams/match-feature",
+    "match-feature": "tangrams/match-feature"
   },
   "devDependencies": {
     "source-map-support": "~0.2.9",
